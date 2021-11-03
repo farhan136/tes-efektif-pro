@@ -4,53 +4,36 @@ namespace App\Http\Controllers;
 
 use App\Models\Barang;
 use Illuminate\Http\Request;
-use Yajra\Datatables\Datatables;
 
 class BarangController extends Controller
 {
     public function index()
     {
-        // if (request()->ajax()) {
-        //     $query = Barang::query();
-        //     return DataTables::of($query)
-        //     ->addColumn('action', function($item){
-
-        //         return '
-        //         <button type="submit" class="btn btn-danger" data-toggle="modal" data-target="#hapusBarang{{$item->id}}">
-        //             Delete
-        //         </button>
-        //         ';
-        //     })
-        //     // ->editColumn('url', function($item){
-        //     //     return '<img  style="max-width:150px;" src="'. Storage::url($item->url) .'">';
-        //     // })
-        //     // ->editColumn('is_featured', function($item){
-        //     //     return $item->is_featured ? 'Yes': 'No';
-        //     // })
-        //     // ->rawColumns(['action', 'url'])->addIndexColumn()->removeColumn('id')
-        //     ->make();
-        // }
-
-        $barang = Barang::all();
+        $barang = Barang::paginate(5);
         return view('index', ['barang'=>$barang]);
     }
 
     public function create()
     {
-        //
+        return view('tambah');   
     }
 
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'foto' => 'required|size:512|mimes:jpg,png',
+            'foto' => 'required|max:100|mimes:jpg,png',
             'nama' => 'required',
             'harga_jual' => 'required|numeric',
             'harga_beli' => 'required|numeric',
             'stok' => 'required|numeric',
         ]);
-        dd($errors);
+        $messages = [
+            'required' => ':attribute tidak boleh kosong.',
+            'max' => 'Ukuran :attribute tidak boleh melebihi :size.',
+            'numeric' => ':attribute harus berupa angka.',
+            'mimes' => ':attribute harus bertipe salah satu dari :values.',
+        ];
         
 
         // mengacak kode barang, cek di db apakah nama tersebut sudah ada?
@@ -62,10 +45,9 @@ class BarangController extends Controller
             $kodeLama = Barang::select('kode')->where('kode', $kode)->first(); 
         } while($kodeLama !== null);
 
-        dd($kode);
 
         $foto = $request->file('foto');
-        $path = $file->store('public/foto_barang');
+        $path = $foto->store('public/foto_barang');
         Barang::create([
             'foto'=> $path,
             'nama'=>$request->nama,
@@ -74,51 +56,67 @@ class BarangController extends Controller
             'harga_beli'=>$request->harga_beli,
             'stok'=>$request->stok,
         ]);
-        return redirect()->back();
+        return redirect('/')->with('status', 'Data barang berhasil ditambahkan!!');
     }
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  \App\Models\Barang  $barang
-     * @return \Illuminate\Http\Response
-     */
-    public function show(Barang $barang)
+    public function edit($id)
     {
-        //
+        $barang = Barang::find($id);
+        
+        return view('edit', ['barang'=>$barang]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  \App\Models\Barang  $barang
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(Barang $barang)
+    public function update(Request $request, $id)
     {
-        //
+        $barang = Barang::find($id);
+
+        $validated = $request->validate([
+            'nama' => 'required',
+            'harga_jual' => 'required|numeric',
+            'harga_beli' => 'required|numeric',
+            'stok' => 'required|numeric',
+        ]);
+        $messages = [
+            'required' => ':attribute tidak boleh kosong.',
+            'numeric' => ':attribute harus berupa angka.',
+        ];
+
+        if ($request->file('foto') !== null) {
+            $foto = $request->file('foto');
+            $path = $foto->store('public/foto_barang');
+        }else{
+            $path = $barang->foto;
+        }
+        
+        $barang->update([
+            'foto'=> $path,
+            'nama'=>$request->nama,
+            'kode'=>$barang->kode,
+            'harga_jual'=>$request->harga_jual,
+            'harga_beli'=>$request->harga_beli,
+            'stok'=>$request->stok,
+        ]);
+        return redirect('/')->with('status', 'Data barang berhasil di-update!!');
     }
 
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Barang  $barang
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, Barang $barang)
+    public function destroy($id)
     {
-        //
+        $barang = Barang::find($id);
+        $barang->delete();
+
+        return redirect('/')->with('status', 'Data berhasil dihapus!!');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  \App\Models\Barang  $barang
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(Barang $barang)
+    public function cari(Request $request)
     {
-        //
+        $barang = Barang::where('nama', 'like', '%'.$request->cari.'%')
+            ->orWhere('kode','like', '%'.$request->cari.'%')
+            ->orWhere('harga_jual','like', '%'.$request->cari.'%')
+            ->orWhere('harga_beli','like', '%'.$request->cari.'%')
+            ->orWhere('stok','like', '%'.$request->cari.'%')->paginate(5);
+        // dd($request->cari);
+
+        $url = 'http://' . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'];
+        return view('index', ['barang'=>$barang, 'url'=>$url]);
     }
 }

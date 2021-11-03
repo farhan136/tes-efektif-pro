@@ -2,18 +2,16 @@
 
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| contains the "web" middleware group. Now create something great!
-|
-*/
+Route::get('/', 'App\Http\Controllers\BarangController@index')->name('index');
 
-// Route::get('/', function () {
-//     return view('index');
-// });
-Route::resource('/', 'App\Http\Controllers\BarangController');
+Route::get('/tambah', 'App\Http\Controllers\BarangController@create');
+
+Route::post('kirim', 'App\Http\Controllers\BarangController@store');
+
+Route::get('/edit/{id}', 'App\Http\Controllers\BarangController@edit');
+
+Route::post('update/{id}', 'App\Http\Controllers\BarangController@update');
+
+Route::get('/hapus/{id}', 'App\Http\Controllers\BarangController@destroy');
+
+Route::post('cari', 'App\Http\Controllers\BarangController@cari');
